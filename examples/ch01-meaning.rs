@@ -1,14 +1,12 @@
 use std::fmt;
 
-static OPEN: &str = "«";
-static CLOSE: &str = "»";
-
 enum Node {
     Add { left: Box<Node>, right: Box<Node> },
     Multiply { left: Box<Node>, right: Box<Node> },
     Number { value: i64 },
 }
 
+/// Plainly show the operation or value.
 impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         use Node::*;
@@ -20,14 +18,17 @@ impl fmt::Display for Node {
     }
 }
 
+/// The debug repr of a Node encloses the `Display` in `"«"` and `"»"`.
 impl fmt::Debug for Node {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         use Node::*;
+        write!(f, "«")?;
         match self {
-            Add { left, right } => write!(f, "{}{} + {}{}", OPEN, left, right, CLOSE),
-            Multiply { left, right } => write!(f, "{}{} * {}{}", OPEN, left, right, CLOSE),
-            Number { value } => write!(f, "{}{}{}", OPEN, value, CLOSE),
-        }
+            Add { left, right } => write!(f, "{} + {}", left, right),
+            Multiply { left, right } => write!(f, "{} * {}", left, right),
+            Number { value } => write!(f, "{}", value),
+        }?;
+        write!(f, "»")
     }
 }
 
