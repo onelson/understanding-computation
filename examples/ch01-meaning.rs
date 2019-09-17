@@ -1,5 +1,6 @@
 use std::fmt;
 
+#[derive(Clone)]
 enum Node {
     Add { left: Box<Node>, right: Box<Node> },
     Multiply { left: Box<Node>, right: Box<Node> },
@@ -46,10 +47,52 @@ impl Node {
     pub fn num(value: i64) -> Node {
         Node::Number { value }
     }
+
+    pub fn is_reducible(&self) -> bool {
+        match self {
+            Node::Number { .. } => false,
+            Node::Add { .. } | Node::Multiply { .. } => true,
+        }
+    }
+
+    fn as_number(&self) -> Option<i64> {
+        match self {
+            Node::Number { value } => Some(*value),
+            _ => None,
+        }
+    }
+
+    pub fn reduce(&self) -> Node {
+        match self {
+            Node::Add { left, right } => {
+                if left.is_reducible() {
+                    Node::add(left.reduce(), *right.clone())
+                } else if right.is_reducible() {
+                    Node::add(*left.clone(), right.reduce())
+                } else {
+                    Node::num(left.as_number().unwrap() + right.as_number().unwrap())
+                }
+            }
+            Node::Multiply { left, right } => {
+                if left.is_reducible() {
+                    Node::mul(left.reduce(), *right.clone())
+                } else if right.is_reducible() {
+                    Node::mul(*left.clone(), right.reduce())
+                } else {
+                    Node::num(left.as_number().unwrap() * right.as_number().unwrap())
+                }
+            }
+            Node::Number { .. } => unreachable!("Number is not reducible"),
+        }
+    }
 }
 
 fn main() {
-    let expr = Node::mul(Node::add(Node::num(3), Node::num(5)), Node::num(2));
+    let mut expr = Node::mul(Node::add(Node::num(3), Node::num(5)), Node::num(2));
+    println!("{:?}", &expr);
 
-    println!("{:?}", expr);
+    while expr.is_reducible() {
+        expr = expr.reduce();
+        println!("{:?}", &expr);
+    }
 }
