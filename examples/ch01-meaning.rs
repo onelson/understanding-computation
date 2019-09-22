@@ -1,98 +1,118 @@
-use std::fmt;
+use std::rc::Rc;
+
+trait Expression {
+    fn is_reducible(&self) -> bool;
+    fn reduce(&self) -> Option<Expr>;
+    fn inspect(&self) -> String {
+        format!("«{}»", self.to_s())
+    }
+    fn to_s(&self) -> String;
+    fn as_value(&self) -> Option<&Value> {
+        None
+    }
+}
+
+type Expr = Rc<Box<dyn Expression>>;
 
 #[derive(Clone)]
-enum Node {
-    Add { left: Box<Node>, right: Box<Node> },
-    Multiply { left: Box<Node>, right: Box<Node> },
-    Number { value: i64 },
+enum Value {
+    Number(i64),
 }
 
-/// Plainly show the operation or value.
-impl fmt::Display for Node {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        use Node::*;
-        match self {
-            Add { left, right } => write!(f, "{} + {}", left, right),
-            Multiply { left, right } => write!(f, "{} * {}", left, right),
-            Number { value } => write!(f, "{}", value),
-        }
-    }
-}
-
-/// The debug repr of a Node encloses the `Display` in `"«"` and `"»"`.
-impl fmt::Debug for Node {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        use Node::*;
-        write!(f, "«")?;
-        match self {
-            Add { left, right } => write!(f, "{} + {}", left, right),
-            Multiply { left, right } => write!(f, "{} * {}", left, right),
-            Number { value } => write!(f, "{}", value),
-        }?;
-        write!(f, "»")
-    }
-}
-
-impl Node {
-    pub fn add(left: Node, right: Node) -> Node {
-        let left = Box::new(left);
-        let right = Box::new(right);
-        Node::Add { left, right }
-    }
-    pub fn mul(left: Node, right: Node) -> Node {
-        let left = Box::new(left);
-        let right = Box::new(right);
-        Node::Multiply { left, right }
-    }
-    pub fn num(value: i64) -> Node {
-        Node::Number { value }
+impl Expression for Value {
+    fn is_reducible(&self) -> bool {
+        false
     }
 
-    pub fn is_reducible(&self) -> bool {
-        match self {
-            Node::Number { .. } => false,
-            Node::Add { .. } | Node::Multiply { .. } => true,
+    fn reduce(&self) -> Option<Expr> {
+        None
+    }
+
+    fn to_s(&self) -> String {
+        match &self {
+            Value::Number(value) => format!("{}", value),
         }
     }
 
-    fn as_number(&self) -> Option<i64> {
-        match self {
-            Node::Number { value } => Some(*value),
-            _ => None,
-        }
+    fn as_value(&self) -> Option<&Value> {
+        Some(&self)
+    }
+}
+
+struct Add(Expr, Expr);
+
+impl Expression for Add {
+    fn is_reducible(&self) -> bool {
+        true
     }
 
-    pub fn reduce(&self) -> Node {
-        match self {
-            Node::Add { left, right } => {
-                if left.is_reducible() {
-                    Node::add(left.reduce(), *right.clone())
-                } else if right.is_reducible() {
-                    Node::add(*left.clone(), right.reduce())
-                } else {
-                    Node::num(left.as_number().unwrap() + right.as_number().unwrap())
+    fn reduce(&self) -> Option<Expr> {
+        match (self.0.is_reducible(), self.1.is_reducible()) {
+            (true, _) => Some(Rc::new(Box::new(Add(
+                self.0.reduce().unwrap(),
+                self.1.clone(),
+            )))),
+            (_, true) => Some(Rc::new(Box::new(Add(
+                self.0.clone(),
+                self.1.reduce().unwrap(),
+            )))),
+            _ => match (self.0.as_value(), self.1.as_value()) {
+                (Some(Value::Number(a)), Some(Value::Number(b))) => {
+                    Some(Rc::new(Box::new(Value::Number(a + b))))
                 }
-            }
-            Node::Multiply { left, right } => {
-                if left.is_reducible() {
-                    Node::mul(left.reduce(), *right.clone())
-                } else if right.is_reducible() {
-                    Node::mul(*left.clone(), right.reduce())
-                } else {
-                    Node::num(left.as_number().unwrap() * right.as_number().unwrap())
-                }
-            }
-            Node::Number { .. } => unreachable!("Number is not reducible"),
+                _ => panic!("Unexpected values"),
+            },
         }
+    }
+
+    fn to_s(&self) -> String {
+        format!("{} + {}", self.0.to_s(), self.1.to_s())
+    }
+}
+
+struct Multiply(Expr, Expr);
+
+impl Expression for Multiply {
+    fn is_reducible(&self) -> bool {
+        true
+    }
+
+    fn reduce(&self) -> Option<Expr> {
+        match (self.0.is_reducible(), self.1.is_reducible()) {
+            (true, _) => Some(Rc::new(Box::new(Multiply(
+                self.0.reduce().unwrap(),
+                self.1.clone(),
+            )))),
+            (_, true) => Some(Rc::new(Box::new(Multiply(
+                self.0.clone(),
+                self.1.reduce().unwrap(),
+            )))),
+            _ => match (self.0.as_value(), self.1.as_value()) {
+                (Some(Value::Number(a)), Some(Value::Number(b))) => {
+                    Some(Rc::new(Box::new(Value::Number(a * b))))
+                }
+                _ => panic!("Unexpected values"),
+            },
+        }
+    }
+    fn to_s(&self) -> String {
+        format!("{} * {}", self.0.to_s(), self.1.to_s())
     }
 }
 
 fn main() {
-    let mut expr = Node::mul(Node::add(Node::num(3), Node::num(5)), Node::num(2));
-    println!("{:?}", &expr);
+    let mut expr: Expr = Rc::new(Box::new(Multiply(
+        Rc::new(Box::new(Add(
+            Rc::new(Box::new(Value::Number(3))),
+            Rc::new(Box::new(Value::Number(5))),
+        ))),
+        Rc::new(Box::new(Value::Number(2))),
+    )));
+
+    println!("{}", &expr.inspect());
 
     while expr.is_reducible() {
-        expr = expr.reduce();
-        println!("{:?}", &expr);
+        expr = expr.reduce().unwrap();
+        println!("{}", expr.inspect());
     }
 }
