@@ -32,12 +32,17 @@ impl Environment {
 impl fmt::Display for Environment {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         write!(f, "{{ ")?;
-        for (key, value) in &self.0 {
-            match value {
-                Value::Number(val) => write!(f, "{}={}", key, val)?,
-                Value::Boolean(val) => write!(f, "{}={}", key, val)?,
-            }
-        }
+
+        let locals: String = self
+            .0
+            .iter()
+            .map(|(key, value)| match value {
+                Value::Number(val) => format!("{}={}", key, val),
+                Value::Boolean(val) => format!("{}={}", key, val),
+            })
+            .collect::<Vec<String>>()
+            .join(", ");
+        write!(f, "{}", locals)?;
         write!(f, " }}")
     }
 }

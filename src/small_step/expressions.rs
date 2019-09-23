@@ -48,7 +48,7 @@ impl From<Value> for Expr {
 pub struct Add(Expr, Expr);
 
 impl Add {
-    pub fn new<E: Into<Expr>>(left: E, right: E) -> Self {
+    pub fn new<T: Into<Expr>>(left: T, right: T) -> Self {
         Self(left.into(), right.into())
     }
 }
@@ -87,7 +87,7 @@ impl From<Add> for Expr {
 pub struct Multiply(Expr, Expr);
 
 impl Multiply {
-    pub fn new<E: Into<Expr>>(left: E, right: E) -> Self {
+    pub fn new<T: Into<Expr>>(left: T, right: T) -> Self {
         Self(left.into(), right.into())
     }
 }
@@ -130,7 +130,7 @@ impl From<Multiply> for Expr {
 pub struct LessThan(Expr, Expr);
 
 impl LessThan {
-    pub fn new<E: Into<Expr>>(left: E, right: E) -> Self {
+    pub fn new<T: Into<Expr>>(left: T, right: T) -> Self {
         Self(left.into(), right.into())
     }
 }
