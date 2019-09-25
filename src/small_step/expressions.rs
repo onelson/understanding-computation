@@ -6,7 +6,7 @@ pub type Expr = Rc<Box<dyn Expression>>;
 
 pub trait Expression: Printable {
     fn is_reducible(&self) -> bool;
-    fn reduce(&self, environment: &Environment) -> Option<Expr>;
+    fn reduce(&self, environment: &Environment) -> Expr;
     fn as_value(&self) -> Option<&Value> {
         None
     }
@@ -22,8 +22,8 @@ impl Expression for Value {
     fn is_reducible(&self) -> bool {
         false
     }
-    fn reduce(&self, _environment: &Environment) -> Option<Expr> {
-        None
+    fn reduce(&self, _environment: &Environment) -> Expr {
+        panic!("Cannot reduce a Value.")
     }
     fn as_value(&self) -> Option<&Value> {
         Some(&self)
@@ -58,14 +58,12 @@ impl Expression for Add {
         true
     }
 
-    fn reduce(&self, environment: &Environment) -> Option<Expr> {
+    fn reduce(&self, environment: &Environment) -> Expr {
         match (self.0.is_reducible(), self.1.is_reducible()) {
-            (true, _) => Some(Add::new(self.0.reduce(environment).unwrap(), self.1.clone()).into()),
-            (_, true) => Some(Add::new(self.0.clone(), self.1.reduce(environment).unwrap()).into()),
+            (true, _) => Add::new(self.0.reduce(environment), self.1.clone()).into(),
+            (_, true) => Add::new(self.0.clone(), self.1.reduce(environment)).into(),
             _ => match (self.0.as_value(), self.1.as_value()) {
-                (Some(Value::Number(a)), Some(Value::Number(b))) => {
-                    Some(Value::Number(a + b).into())
-                }
+                (Some(Value::Number(a)), Some(Value::Number(b))) => Value::Number(a + b).into(),
                 _ => panic!("Unexpected values"),
             },
         }
@@ -97,18 +95,12 @@ impl Expression for Multiply {
         true
     }
 
-    fn reduce(&self, environment: &Environment) -> Option<Expr> {
+    fn reduce(&self, environment: &Environment) -> Expr {
         match (self.0.is_reducible(), self.1.is_reducible()) {
-            (true, _) => {
-                Some(Multiply::new(self.0.reduce(environment).unwrap(), self.1.clone()).into())
-            }
-            (_, true) => {
-                Some(Multiply::new(self.0.clone(), self.1.reduce(environment).unwrap()).into())
-            }
+            (true, _) => Multiply::new(self.0.reduce(environment), self.1.clone()).into(),
+            (_, true) => Multiply::new(self.0.clone(), self.1.reduce(environment)).into(),
             _ => match (self.0.as_value(), self.1.as_value()) {
-                (Some(Value::Number(a)), Some(Value::Number(b))) => {
-                    Some(Value::Number(a * b).into())
-                }
+                (Some(Value::Number(a)), Some(Value::Number(b))) => Value::Number(a * b).into(),
                 _ => panic!("Unexpected values"),
             },
         }
@@ -140,14 +132,12 @@ impl Expression for LessThan {
         true
     }
 
-    fn reduce(&self, environment: &Environment) -> Option<Expr> {
+    fn reduce(&self, environment: &Environment) -> Expr {
         match (self.0.is_reducible(), self.1.is_reducible()) {
-            (true, _) => Some(LessThan(self.0.reduce(environment).unwrap(), self.1.clone()).into()),
-            (_, true) => Some(LessThan(self.0.clone(), self.1.reduce(environment).unwrap()).into()),
+            (true, _) => LessThan(self.0.reduce(environment), self.1.clone()).into(),
+            (_, true) => LessThan(self.0.clone(), self.1.reduce(environment)).into(),
             _ => match (self.0.as_value(), self.1.as_value()) {
-                (Some(Value::Number(a)), Some(Value::Number(b))) => {
-                    Some(Value::Boolean(a < b).into())
-                }
+                (Some(Value::Number(a)), Some(Value::Number(b))) => Value::Boolean(a < b).into(),
                 _ => panic!("Unexpected values"),
             },
         }
@@ -179,9 +169,9 @@ impl Expression for Variable {
         true
     }
 
-    fn reduce(&self, environment: &Environment) -> Option<Rc<Box<dyn Expression>>> {
+    fn reduce(&self, environment: &Environment) -> Expr {
         let value = &environment.0[&self.0];
-        Some(value.clone().into())
+        value.clone().into()
     }
 }
 

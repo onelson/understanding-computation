@@ -1,4 +1,4 @@
-use crate::small_step::expressions::Expr;
+use crate::small_step::expressions::{Expr, Value};
 use crate::small_step::{Environment, Printable};
 use std::rc::Rc;
 
@@ -57,7 +57,7 @@ impl Statement for Assign {
     fn reduce(&self, environment: &Environment) -> (Rc<Box<dyn Statement>>, Environment) {
         if self.1.is_reducible() {
             (
-                Assign(self.0.clone(), self.1.reduce(environment).unwrap()).into(),
+                Assign(self.0.clone(), self.1.reduce(environment)).into(),
                 environment.clone(),
             )
         } else {
@@ -81,7 +81,52 @@ impl Printable for Assign {
     }
 }
 
-// TODO: If
+pub struct If(Expr, Stmt, Stmt);
+
+impl If {
+    pub fn new<E: Into<Expr>, S: Into<Stmt>>(condition: E, consequence: S, alternative: S) -> Self {
+        Self(condition.into(), consequence.into(), alternative.into())
+    }
+}
+
+impl Statement for If {
+    fn is_reducible(&self) -> bool {
+        true
+    }
+    fn reduce(&self, environment: &Environment) -> (Rc<Box<dyn Statement>>, Environment) {
+        if self.0.is_reducible() {
+            let cond_reduced = self.0.reduce(environment);
+            (
+                If::new(cond_reduced, self.1.clone(), self.2.clone()).into(),
+                environment.clone(),
+            )
+        } else {
+            let stmt = match self.0.as_value() {
+                Some(Value::Boolean(true)) => self.1.clone(),
+                Some(Value::Boolean(false)) => self.2.clone(),
+                _ => panic!("Condition must be boolean."),
+            };
+            (stmt, environment.clone())
+        }
+    }
+}
+
+impl From<If> for Stmt {
+    fn from(statement: If) -> Self {
+        Rc::new(Box::new(statement))
+    }
+}
+
+impl Printable for If {
+    fn to_s(&self) -> String {
+        format!(
+            "if ({}) {{ {} }} else {{ {} }}",
+            self.0.to_s(),
+            self.1.to_s(),
+            self.2.to_s()
+        )
+    }
+}
 
 pub struct Sequence(Stmt, Stmt);
 
@@ -95,7 +140,6 @@ impl Statement for Sequence {
     fn is_reducible(&self) -> bool {
         true
     }
-
     fn reduce(&self, environment: &Environment) -> (Rc<Box<dyn Statement>>, Environment) {
         if self.0.does_nothing() {
             (self.1.clone(), environment.clone())
