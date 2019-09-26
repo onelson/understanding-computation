@@ -40,15 +40,15 @@ impl Printable for Value {
 }
 
 impl From<Value> for Expr {
-    fn from(e: Value) -> Self {
-        Rc::new(Box::new(e))
+    fn from(expression: Value) -> Self {
+        Rc::new(Box::new(expression))
     }
 }
 
 pub struct Add(Expr, Expr);
 
 impl Add {
-    pub fn new<T: Into<Expr>>(left: T, right: T) -> Self {
+    pub fn new<T1: Into<Expr>, T2: Into<Expr>>(left: T1, right: T2) -> Self {
         Self(left.into(), right.into())
     }
 }
@@ -77,15 +77,15 @@ impl Printable for Add {
 }
 
 impl From<Add> for Expr {
-    fn from(e: Add) -> Self {
-        Rc::new(Box::new(e))
+    fn from(expression: Add) -> Self {
+        Rc::new(Box::new(expression))
     }
 }
 
 pub struct Multiply(Expr, Expr);
 
 impl Multiply {
-    pub fn new<T: Into<Expr>>(left: T, right: T) -> Self {
+    pub fn new<T1: Into<Expr>, T2: Into<Expr>>(left: T1, right: T2) -> Self {
         Self(left.into(), right.into())
     }
 }
@@ -114,15 +114,15 @@ impl Printable for Multiply {
 }
 
 impl From<Multiply> for Expr {
-    fn from(e: Multiply) -> Self {
-        Rc::new(Box::new(e))
+    fn from(expression: Multiply) -> Self {
+        Rc::new(Box::new(expression))
     }
 }
 
 pub struct LessThan(Expr, Expr);
 
 impl LessThan {
-    pub fn new<T: Into<Expr>>(left: T, right: T) -> Self {
+    pub fn new<T1: Into<Expr>, T2: Into<Expr>>(left: T1, right: T2) -> Self {
         Self(left.into(), right.into())
     }
 }
@@ -151,8 +151,8 @@ impl Printable for LessThan {
 }
 
 impl From<LessThan> for Expr {
-    fn from(e: LessThan) -> Self {
-        Rc::new(Box::new(e))
+    fn from(expression: LessThan) -> Self {
+        Rc::new(Box::new(expression))
     }
 }
 
@@ -182,7 +182,7 @@ impl Printable for Variable {
 }
 
 impl From<Variable> for Expr {
-    fn from(e: Variable) -> Self {
-        Rc::new(Box::new(e))
+    fn from(expression: Variable) -> Self {
+        Rc::new(Box::new(expression))
     }
 }
