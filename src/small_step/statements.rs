@@ -1,5 +1,5 @@
-use crate::small_step::expressions::{Expr, Value};
-use crate::small_step::{Environment, Printable};
+use crate::small_step::expressions::Expr;
+use crate::{Environment, Printable, Value};
 use std::rc::Rc;
 
 /// Boxed version of a `Statement` (so they can be passed around generically).

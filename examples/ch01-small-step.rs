@@ -1,4 +1,4 @@
-use uc::small_step::{Value::*, *};
+use uc::{small_step::*, Value::*};
 
 fn main() {
     let mut machine = Machine::new(Sequence::new(

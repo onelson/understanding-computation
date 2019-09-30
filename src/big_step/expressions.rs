@@ -1,24 +1,21 @@
-use crate::small_step::{Environment, Printable};
-use crate::Value;
+use crate::{Environment, Printable, Value};
 use std::rc::Rc;
 
 /// Boxed version of an `Expression` (so they can be passed around generically).
 pub type Expr = Rc<Box<dyn Expression>>;
+
 pub trait Expression: Printable {
-    fn is_reducible(&self) -> bool;
-    fn reduce(&self, environment: &Environment) -> Expr;
+    fn evaluate(&self, environment: &Environment) -> Expr;
     fn as_value(&self) -> Option<&Value> {
         None
     }
 }
 
 impl Expression for Value {
-    fn is_reducible(&self) -> bool {
-        false
+    fn evaluate(&self, _: &Environment) -> Expr {
+        self.clone().into()
     }
-    fn reduce(&self, _environment: &Environment) -> Expr {
-        panic!("Cannot reduce a Value.")
-    }
+
     fn as_value(&self) -> Option<&Value> {
         Some(&self)
     }
@@ -39,18 +36,13 @@ impl Add {
 }
 
 impl Expression for Add {
-    fn is_reducible(&self) -> bool {
-        true
-    }
-
-    fn reduce(&self, environment: &Environment) -> Expr {
-        match (self.0.is_reducible(), self.1.is_reducible()) {
-            (true, _) => Add::new(self.0.reduce(environment), self.1.clone()).into(),
-            (_, true) => Add::new(self.0.clone(), self.1.reduce(environment)).into(),
-            _ => match (self.0.as_value(), self.1.as_value()) {
-                (Some(Value::Number(a)), Some(Value::Number(b))) => Value::Number(a + b).into(),
-                _ => panic!("Unexpected values"),
-            },
+    fn evaluate(&self, environment: &Environment) -> Expr {
+        match (
+            self.0.evaluate(environment).as_value(),
+            self.1.evaluate(environment).as_value(),
+        ) {
+            (Some(Value::Number(a)), Some(Value::Number(b))) => Value::Number(a + b).into(),
+            _ => panic!("Unexpected values"),
         }
     }
 }
@@ -76,18 +68,13 @@ impl Multiply {
 }
 
 impl Expression for Multiply {
-    fn is_reducible(&self) -> bool {
-        true
-    }
-
-    fn reduce(&self, environment: &Environment) -> Expr {
-        match (self.0.is_reducible(), self.1.is_reducible()) {
-            (true, _) => Multiply::new(self.0.reduce(environment), self.1.clone()).into(),
-            (_, true) => Multiply::new(self.0.clone(), self.1.reduce(environment)).into(),
-            _ => match (self.0.as_value(), self.1.as_value()) {
-                (Some(Value::Number(a)), Some(Value::Number(b))) => Value::Number(a * b).into(),
-                _ => panic!("Unexpected values"),
-            },
+    fn evaluate(&self, environment: &Environment) -> Expr {
+        match (
+            self.0.evaluate(environment).as_value(),
+            self.1.evaluate(environment).as_value(),
+        ) {
+            (Some(Value::Number(a)), Some(Value::Number(b))) => Value::Number(a * b).into(),
+            _ => panic!("Unexpected values"),
         }
     }
 }
@@ -113,18 +100,13 @@ impl LessThan {
 }
 
 impl Expression for LessThan {
-    fn is_reducible(&self) -> bool {
-        true
-    }
-
-    fn reduce(&self, environment: &Environment) -> Expr {
-        match (self.0.is_reducible(), self.1.is_reducible()) {
-            (true, _) => LessThan(self.0.reduce(environment), self.1.clone()).into(),
-            (_, true) => LessThan(self.0.clone(), self.1.reduce(environment)).into(),
-            _ => match (self.0.as_value(), self.1.as_value()) {
-                (Some(Value::Number(a)), Some(Value::Number(b))) => Value::Boolean(a < b).into(),
-                _ => panic!("Unexpected values"),
-            },
+    fn evaluate(&self, environment: &Environment) -> Expr {
+        match (
+            self.0.evaluate(environment).as_value(),
+            self.1.evaluate(environment).as_value(),
+        ) {
+            (Some(Value::Number(a)), Some(Value::Number(b))) => Value::Boolean(a < b).into(),
+            _ => panic!("Unexpected values"),
         }
     }
 }
@@ -150,11 +132,7 @@ impl Variable {
 }
 
 impl Expression for Variable {
-    fn is_reducible(&self) -> bool {
-        true
-    }
-
-    fn reduce(&self, environment: &Environment) -> Expr {
+    fn evaluate(&self, environment: &Environment) -> Expr {
         let value = &environment.0[&self.0];
         value.clone().into()
     }
